@@ -5,13 +5,14 @@ import pandas as pd
 
 def load_data(input_file):
     """Lea el archivo usando pandas y devuelva un DataFrame"""
-
+    data = pd.read_csv(input_file, sep='\t')
+    return data
 
 def create_key(df, n):
     """Cree una nueva columna en el DataFrame que contenga el key de la columna 'text'"""
 
     df = df.copy()
-
+    df['key'] = df['text']
     # Copie la columna 'text' a la columna 'key'
     # Remueva los espacios en blanco al principio y al final de la cadena
     # Convierta el texto a minúsculas
@@ -22,7 +23,14 @@ def create_key(df, n):
     # Convierta el texto a una lista de n-gramas
     # Ordene la lista de n-gramas y remueve duplicados
     # Convierta la lista de ngramas a una cadena
-    
+    df['key'] = df['key'].\
+    str.strip().str.lower().str.replace("-","").str.translate(
+           str.maketrans("", "", "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~")
+        ).\
+    str.replace(".","").str.split().str.join("").\
+    apply(lambda x: [x[i:i+n] for i in range( len(x) - n +1)]).\
+    apply(lambda x:sorted(set(x))).str.join(" ")
+
     return df
 
 
@@ -35,7 +43,11 @@ def generate_cleaned_column(df):
     # Seleccione la primera fila de cada grupo de 'key'
     # Cree un diccionario con 'key' como clave y 'text' como valor
     # Cree la columna 'cleaned' usando el diccionario
-
+    df = df.copy()
+    df = df.sort_values(by=["key","text"]).copy()
+    keys = df.groupby("key").first().reset_index()
+    keys = keys.set_index("key")["text"].to_dict()
+    df["cleaned"] = df["key"].map(keys)
     return df
 
 
@@ -43,8 +55,8 @@ def save_data(df, output_file):
     """Guarda el DataFrame en un archivo"""
 
     df = df.copy()
-    df = df[["cleaned"]]
-    df = df.rename(columns={"cleaned": "text"})
+    #df = df[["cleaned"]]
+    #df = df.rename(columns={"cleaned": "text"})
     df.to_csv(output_file, index=False)
 
 
@@ -58,8 +70,8 @@ def main(input_file, output_file, n=2):
     save_data(df, output_file)
 
 
-if __name__ == "__main__":
+if _name_ == "_main_":
     main(
         input_file="input.txt",
         output_file="output.txt",
-    )
+    )
